@@ -1,4 +1,4 @@
-from mindspore import Tensor,ops,nn
+from mindspore import Tensor,ops,nn,Parameter
 from time import time
 
 class Conv2d_Spetral_Norm(nn.Cell):
@@ -18,41 +18,41 @@ class Conv2d_Spetral_Norm(nn.Cell):
                  data_format='NCHW'):
         super().__init__()
         
-        self.conv2d=nn.Conv2d(in_channels,out_channels,kernel_size,stride,pad_mode,padding,dilation,group,has_bias,weight_init,bias_init,data_format)
-        weight:Tensor = self.conv2d.weight.value()
-        weight_shape=weight.shape
-        self.u=ops.standard_normal((1,weight_shape[-1]))
+        # self.conv2d=nn.Conv2d(in_channels,out_channels,kernel_size,stride,pad_mode,padding,dilation,group,has_bias,weight_init,bias_init,data_format)
+        self.conv2d=ops.Conv2D(out_channels,kernel_size,1,pad_mode,padding,stride,dilation,group,data_format)
+        weight_shape=(out_channels,in_channels,kernel_size,kernel_size)
+        self.u=Parameter(ops.standard_normal((1,weight_shape[-1])))
+        self.weight=Parameter(ops.standard_normal(weight_shape))
         self.l2_normalize=ops.L2Normalize(epsilon=1e-12)
 
     def spectral_norm(self,weight:Tensor,iterarion = 1)->Tensor:
         weight_shape = weight.shape
 
-        w:Tensor = weight.reshape(-1,weight_shape[-1])
+        w = weight.reshape(-1,weight_shape[-1])
 
-        u_hat:Tensor = self.u
-        v_hat:Tensor = None
+        u_hat = Tensor(self.u)
+        v_hat = None
 
         for _ in range(iterarion):
             v_hat=self.l2_normalize(ops.matmul(u_hat,w.T))
             u_hat=self.l2_normalize(ops.matmul(v_hat,w))
 
-        u_hat:Tensor=ops.stop_gradient(u_hat)
-        v_hat:Tensor=ops.stop_gradient(v_hat)
+        u_hat=ops.stop_gradient(u_hat)
+        v_hat=ops.stop_gradient(v_hat)
 
         norm_value = ops.matmul(ops.matmul(v_hat,w),u_hat.T)
 
         self.u=u_hat
 
-        w_norm:Tensor=w/norm_value
+        w_norm=w/norm_value
         w_norm=w_norm.reshape(weight_shape)
 
         return w_norm
 
     def construct(self, x:Tensor):
-        weight=self.conv2d.weight.value()
+        weight=Tensor(self.weight)
         weight=self.spectral_norm(weight)
-        self.conv2d.weight.set_data(weight)
-
-        x=self.conv2d(x)
+        x=self.conv2d(x,weight)
+        self.weight=weight
 
         return x
