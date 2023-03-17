@@ -148,8 +148,8 @@ def train():
             cartoon, gen_img_i)
         texture_d_loss, texture_d_grads = grad_texture_discriminator_fn(
             cartoon, gen_img_i)
-        optimizer_surface_generator(surface_d_grads)
-        optimizer_texture_generator(texture_d_grads)
+        optimizer_surface_discriminator(surface_d_grads)
+        optimizer_texture_discriminator(texture_d_grads)
         
         (g_loss, gen_img), g_grads = grad_generator_fn(real)
         optimizer_generator(g_grads)
