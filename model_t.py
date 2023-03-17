@@ -78,7 +78,6 @@ def train():
         fake_guided = guided_filter(fake, fake, 8, 0.05)
         
         fake_guided = ops.stop_gradient(fake_guided)
-        real_guided = ops.stop_gradient(real_guided)
         
         real = surface_discriminator(real_guided)
         fake = surface_discriminator(fake_guided)
@@ -93,7 +92,6 @@ def train():
         fake_gray = gray_ish(fake)
         
         fake_gray = ops.stop_gradient(fake_gray)
-        real_gray = ops.stop_gradient(real_gray)
         
         real = texture_discriminator(real_gray)
         fake = texture_discriminator(fake_gray)
@@ -142,17 +140,17 @@ def train():
         surface_discriminator.set_train()
         texture_discriminator.set_train()
         
-        gen_img_i = generator(real)
-        
-        surface_d_loss, surface_d_grads = grad_surface_discriminator_fn(
-            cartoon, gen_img_i)
-        texture_d_loss, texture_d_grads = grad_texture_discriminator_fn(
-            cartoon, gen_img_i)
-        optimizer_surface_generator(surface_d_grads)
-        optimizer_texture_generator(texture_d_grads)
-        
         (g_loss, gen_img), g_grads = grad_generator_fn(real)
         optimizer_generator(g_grads)
+        
+        surface_d_loss, surface_d_grads = grad_surface_discriminator_fn(
+            cartoon, gen_img)
+        texture_d_loss, texture_d_grads = grad_texture_discriminator_fn(
+            cartoon, gen_img)
+        optimizer_surface_discriminator(surface_d_grads)
+        optimizer_texture_discriminator(texture_d_grads)
+        
+        
 
 
         return g_loss, surface_d_loss+texture_d_loss, gen_img

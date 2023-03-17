@@ -4,12 +4,14 @@ from mindspore.ops.operations import image_ops
 from conf import conf
 from util.spectral_norm import Conv2d_Spetral_Norm
 
+# conv3x3=Conv2d_Spetral_Norm
+conv3x3 = nn.Conv2d
 
-def conv3x3(in_channel, out_channel, kernel_size=3, stride=1, padding=1):
-    if conf["sn"]:
-        return Conv2d_Spetral_Norm(in_channel, out_channel, kernel_size=kernel_size, stride=stride, padding=padding, pad_mode="pad")
-    else:
-        return nn.Conv2d(in_channel, out_channel, kernel_size=kernel_size, stride=stride, padding=padding, pad_mode="pad")
+# def conv3x3(in_channel, out_channel, kernel_size=3, stride=1, padding=1):
+#     if conf["sn"]:
+#         return Conv2d_Spetral_Norm(in_channel, out_channel, kernel_size=kernel_size, stride=stride, padding=padding, pad_mode="pad")
+#     else:
+#         return nn.Conv2d(in_channel, out_channel, kernel_size=kernel_size, stride=stride, padding=padding, pad_mode="pad")
 
 
 class ResidualBlock(nn.Cell):
@@ -53,56 +55,29 @@ class EncodingLayer(nn.Cell):
 
 class DecodingLayer(nn.Cell):
 
-    def transform(self, before: Tensor, now: Tensor, R: int = 3) -> Tensor:
+    def transform(self, before: Tensor, now: Tensor, R: int = 1) -> Tensor:
         N, C, H, W = now.shape
 
         f = ops.transpose(before, (0, 2, 3, 1))  # N H W C
         f = ops.reshape(f, (N*H*W, 1, C))          # N*H*W 1 C
 
-        # g_ext_nc = ops.zeros((R*R, N, C, H, W), mindspore.float32)
-        # g_ext_nc[0, :, :, :, :] = now
-        # _idx = 1
-        # assert(R % 2 == 1)
-
-        # for i in range(1, R//2+1):
-        #     g_ext_nc[_idx, :, :, :-i, :] = now[:, :, i:, :]
-        #     _idx += 1
-        #     g_ext_nc[_idx, :, :, i:, :] = now[:, :, :-i, :]
-        #     _idx += 1
-        #     g_ext_nc[_idx, :, :, :, :-i] = now[:, :, :, i:]
-        #     _idx += 1
-        #     g_ext_nc[_idx, :, :, :, i:] = now[:, :, :, :-i]
-        #     _idx += 1
-        #     for j in range(1, R//2+1):
-        #         g_ext_nc[_idx, :, :, :-i, :-j] = now[:, :, i:, j:]
-        #         _idx += 1
-        #         g_ext_nc[_idx, :, :, :-i, j:] = now[:, :, i:, :-j]
-        #         _idx += 1
-        #         g_ext_nc[_idx, :, :, i:, :-j] = now[:, :, :-i, j:]
-        #         _idx += 1
-        #         g_ext_nc[_idx, :, :, i:, j:] = now[:, :, :-i, :-j]
-        #         _idx += 1
-
-        # # print(g_ext_nc.shape)   # 9 N C H W
-
-        # g_ext = ops.transpose(g_ext_nc, (1, 3, 4, 2, 0))    # N H W C 9
-        # g_ext = ops.reshape(g_ext, (N*H*W, C, R*R))         # N*H*W C 9
-
-        g_ext = nn.Unfold([1, R, R, 1], [1, 1, 1, 1], [
-                          1, 1, 1, 1], "same")(now)   # N C*9 H*W
+        # g_ext = self.unfold(now)   # N C*9 H*W
+        g_ext = now
         g_ext = g_ext.transpose(0, 2, 3, 1)    # N H*W C*9
         g_ext = ops.reshape(g_ext, (N*H*W, C, R*R))  # N*H*W C 9
 
         f_ext = ops.reshape(f, (N*H*W, 1, C))
-        z = ops.bmm(f_ext, g_ext)
+        z = ops.matmul(f_ext, g_ext)
         z = ops.reshape(z, (N*H*W, R*R))
-        alpha = ops.softmax(z, -1)
+        # z = ops.squeeze(z)
+        # alpha = ops.softmax(z, 1)
+        alpha=self.soft_max(z)
         alpha_ext = ops.reshape(alpha, (N*H*W, R*R, 1))
-        r_ext = ops.bmm(g_ext, alpha_ext)
+        r_ext = ops.matmul(g_ext, alpha_ext)
         r = ops.reshape(r_ext, (N, H, W, C))    # N H W C
         r = ops.transpose(r, (0, 3, 1, 2))      # N C H W
 
-        return r
+        return before
 
     def __init__(self, in_channel: int, out_channel: int, K1=3, K2=7):
         super().__init__()
@@ -114,6 +89,11 @@ class DecodingLayer(nn.Cell):
         self.conv2 = nn.Conv2d(in_channel, out_channel,
                                K2, stride=1, padding=K2//2, pad_mode="pad")
         self.leaky_relu = nn.LeakyReLU()
+
+        self.unfold = nn.Unfold([1, 2, 2, 1], [1, 1, 1, 1], [
+                          1, 1, 1, 1], "same")
+        
+        self.soft_max=nn.Softmax(1)
 
     def construct(self, now: Tensor, before: Tensor) -> Tensor:
         N, C, H, W = now.shape
@@ -183,36 +163,47 @@ class Discriminator(nn.Cell):
         super().__init__()
 
         self.net = nn.SequentialCell(
-            conv3x3(in_channel, 32, 3, stride=2, padding=1),
-            nn.LeakyReLU(),
-            conv3x3(32, 32, 3, stride=1, padding=1),
-            nn.LeakyReLU(),
+           conv3x3(in_channel, 32, 3, stride=2, padding=1, pad_mode="pad"),
+           nn.LeakyReLU(),
+           conv3x3(32, 32, 3, stride=1, padding=1, pad_mode="pad"),
+           nn.LeakyReLU(),
 
-            conv3x3(32, 64, 3, stride=2, padding=1),
-            nn.LeakyReLU(),
-            conv3x3(64, 64, 3, stride=1, padding=1),
-            nn.LeakyReLU(),
+           conv3x3(32, 64, 3, stride=2, padding=1, pad_mode="pad"),
+           nn.LeakyReLU(),
+           conv3x3(64, 64, 3, stride=1, padding=1, pad_mode="pad"),
+           nn.LeakyReLU(),
 
-            conv3x3(64, 128, 3, stride=2, padding=1),
-            nn.LeakyReLU(),
-            conv3x3(128, 128, 3, stride=1, padding=1),
-            nn.LeakyReLU()
+           conv3x3(64, 128, 3, stride=2, padding=1, pad_mode="pad"),
+           nn.LeakyReLU(),
+           conv3x3(128, 128, 3, stride=1, padding=1, pad_mode="pad"),
+           nn.LeakyReLU()
         )
 
-        if conf["patch"]:
-            self.snc = conv3x3(128, 1, 1, stride=1, padding=0)
-            self.den = None
-        else:
-            self.snc = None
-            self.den = nn.Dense(128, 1)
+        # if conf["patch"]:
+        #     self.snc = conv3x3(128, 1, 1, stride=1, padding=0)
+        #     self.den = None
+        # else:
+        #     self.snc = None
+        #     self.den = nn.Dense(128, 1)
 
-    def construct(self, x: Tensor) -> Tensor:
-        x = self.net(x)
+        self.snc = None
+        
+        self.mean=ops.ReduceMean()
+        self.den = nn.Dense(128, 1)
 
-        if conf["patch"]:
-            x = self.snc(x)
-        else:
-            x = ops.reduce_mean(x, (2, 3))
-            x = self.den(x)
+    def construct(self, input: Tensor) -> Tensor:
+        
+        a = self.net(input)
+        
 
-        return x
+        # if conf["patch"]:
+        #     x = self.snc(x)
+        # else:
+        #     x = ops.reduce_mean(x, (2, 3))
+        #     x = self.den(x)
+
+        b = self.mean(a, (2, 3))
+        
+        c = self.den(b)
+
+        return c

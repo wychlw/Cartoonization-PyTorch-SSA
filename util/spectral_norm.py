@@ -8,7 +8,7 @@ class Conv2d_Spetral_Norm(nn.Cell):
                  out_channels,
                  kernel_size,
                  stride=1,
-                 pad_mode='same',
+                 pad_mode='pad',
                  padding=0,
                  dilation=1,
                  group=1,
@@ -37,8 +37,8 @@ class Conv2d_Spetral_Norm(nn.Cell):
             v_hat=self.l2_normalize(ops.matmul(u_hat,w.T))
             u_hat=self.l2_normalize(ops.matmul(v_hat,w))
 
-        u_hat=ops.stop_gradient(u_hat)
-        v_hat=ops.stop_gradient(v_hat)
+        # u_hat=ops.stop_gradient(u_hat)
+        # v_hat=ops.stop_gradient(v_hat)
 
         norm_value = ops.matmul(ops.matmul(v_hat,w),u_hat.T)
 
