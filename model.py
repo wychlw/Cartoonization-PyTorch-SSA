@@ -3,7 +3,7 @@ from mindspore import Tensor, ops, nn, dataset
 from util.network import Generator, Discriminator
 from conf import conf
 import os
-from util.loss import L_content, L_motion, L_structure, L_tv, lsgan_loss, lsgan_loss_g, lsgan_loss_d, gan_loss_g, gan_loss_d
+from util.loss import *
 from util.vgg import vgg19
 from util.guided_image_filter import guided_filter
 from util.utility import gray_ish
@@ -42,6 +42,14 @@ def train():
     optimizer_surface_discriminator.update_parameters_name('optim_s_d.')
     optimizer_texture_discriminator.update_parameters_name('optim_t_d.')
 
+    loss_tv = Loss_tv()
+    loss_lsgan_d = Lsgan_loss_d()
+    loss_lsgan_g = Lsgan_loss_g()
+    loss_gan_d = Gan_loss_d()
+    loss_gan_g = Gan_loss_g()
+    adversarial_loss = nn.BCELoss(reduction='mean')
+    valid_lab = ops.ones((conf["batch"], 1), mindspore.float32)
+    fake_lab = ops.zeros((conf["batch"], 1), mindspore.float32)
     def generator_forward(ori: Tensor, last_ori: Tensor = None, last_pred: Tensor = None) -> Tuple[Tensor]:
         
         pred = generator(ori)
@@ -54,14 +62,21 @@ def train():
         s_d = surface_discriminator(pred_guided)
         t_d = texture_discriminator(pred_gray)
 
-        surface_loss = conf["W_surface"] * \
-            lsgan_loss_g(s_d)
-        texture_loss = conf["W_texture"] * \
-            lsgan_loss_g(t_d)
+        # # surface_loss = conf["W_surface"] * \
+        # #     lsgan_loss_g(s_d)
+        surface_loss = conf["W_surface"] * loss_lsgan_g(s_d)
+        # surface_loss = adversarial_loss(s_d, valid_lab)
+
+        # # texture_loss = conf["W_texture"] * \
+        # #     lsgan_loss_g(t_d)
+        texture_loss = conf["W_texture"] * loss_lsgan_g(t_d)
+        # texture_loss = adversarial_loss(t_d, valid_lab)
+
         structure_loss = conf["W_structure"]*L_structure(pred, pred_vgg, VGG)
         content_loss = conf["W_content"] * \
             L_content(pred, ori, pred_vgg, ori_vgg, VGG)
-        tv_loss = conf["W_tv"]*L_tv(pred)
+        # tv_loss = conf["W_tv"]*L_tv(pred)
+        tv_loss = conf["W_tv"]*loss_tv(pred)
 
         motion_loss = 0
         if last_ori is not None and last_pred is not None:
@@ -77,14 +92,18 @@ def train():
         real_guided = guided_filter(real, real, 8, 0.05)
         fake_guided = guided_filter(fake, fake, 8, 0.05)
         
-        fake_guided = ops.stop_gradient(fake_guided)
-        real_guided = ops.stop_gradient(real_guided)
+        # fake_guided = ops.stop_gradient(fake_guided)
+        # real_guided = ops.stop_gradient(real_guided)
         
         real = surface_discriminator(real_guided)
         fake = surface_discriminator(fake_guided)
-        
-        loss = lsgan_loss_d(real, fake)
-        
+
+        # real_loss = adversarial_loss(real, valid_lab)
+        # fake_loss = adversarial_loss(fake, fake_lab)
+        # loss = (real_loss + fake_loss) / 2
+            
+        # loss = lsgan_loss_d(real, fake)
+        loss = loss_lsgan_d(real,fake)
         
         return loss
 
@@ -92,13 +111,18 @@ def train():
         real_gray = gray_ish(real)
         fake_gray = gray_ish(fake)
         
-        fake_gray = ops.stop_gradient(fake_gray)
-        real_gray = ops.stop_gradient(real_gray)
+        # fake_gray = ops.stop_gradient(fake_gray)
+        # real_gray = ops.stop_gradient(real_gray)
         
         real = texture_discriminator(real_gray)
         fake = texture_discriminator(fake_gray)
 
-        loss = lsgan_loss_d(real, fake)
+        # real_loss = adversarial_loss(real, valid_lab)
+        # fake_loss = adversarial_loss(fake, fake_lab)
+        # loss = (real_loss + fake_loss) / 2
+
+        # loss = lsgan_loss_d(real, fake)
+        loss = loss_lsgan_d(real,fake)
 
         return loss
 
@@ -136,6 +160,7 @@ def train():
     cartoon_train=cartoon_train.batch(conf["batch"])
     cartoon_test=cartoon_test.batch(conf["batch"])
 
+    # @mindspore.ms_function
     def train_step(real: Tensor, cartoon: Tensor) -> Tuple[Tensor]:
         
         generator.set_train()
@@ -193,11 +218,11 @@ def train():
                                   "./model/texture_discriminator.ckpt")
         print("Saved...")
         
-    plt.figure(figsize=(10, 5))
-    plt.title("Losses")
-    plt.plot(G_losses, label="G", color="blue")
-    plt.plot(D_losses, label="D", color="orange")
-    plt.xlabel("iterations")
-    plt.ylabel("loss")
-    plt.legend()
-    plt.show()
+    # plt.figure(figsize=(10, 5))
+    # plt.title("Losses")
+    # plt.plot(G_losses, label="G", color="blue")
+    # plt.plot(D_losses, label="D", color="orange")
+    # plt.xlabel("iterations")
+    # plt.ylabel("loss")
+    # plt.legend()
+    # plt.show()

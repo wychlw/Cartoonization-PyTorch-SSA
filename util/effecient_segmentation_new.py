@@ -24,8 +24,8 @@ def effecient_segmentation(input:Tensor,*args,**kwargs)->Tensor:
 
     # batch_out = [proc(img) for img in imgs]
 
-    batch_out=[]
-    for _ in range(input.shape[0]):
-        batch_out.append(__proc(input[0]))
+    num_job = input.shape[0]
+    batch_out = Parallel(n_jobs=num_job)(delayed(__proc)(image)
+                                         for image in input)
 
-    return ops.stack(batch_out)
+    return Tensor(batch_out)

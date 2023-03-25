@@ -67,6 +67,20 @@ def L_content(pred_seq: Tensor, ori_seq: Tensor, pred_vgg: Tensor = None, ori_vg
 
     return loss
 
+class Loss_tv(nn.loss.LossBase):
+    def __init__(self, reduction='mean'):
+        super().__init__()
+        
+    def construct(self, pred_seq):
+
+        N, C, H, W = pred_seq.shape
+
+        dx = pred_seq[:, :, 1:, :]-pred_seq[:, :, :-1, :]
+        dy = pred_seq[:, :, :, 1:]-pred_seq[:, :, :, :-1]
+
+        mean = ops.reduce_mean(dx**2)+ops.reduce_mean(dy**2)
+        loss = mean/(C*H*W)
+        return loss
 
 def L_tv(pred_seq: Tensor) -> Tensor:
 
@@ -79,6 +93,28 @@ def L_tv(pred_seq: Tensor) -> Tensor:
     loss = mean/(C*H*W)
 
     return loss
+
+class Lsgan_loss_g(nn.loss.LossBase):
+    def __init__(self, reduction='mean'):
+        super().__init__()
+
+        self.mean=ops.ReduceMean()
+        
+    def construct(self, fake_img):
+        
+        return self.mean(fake_img)
+        # return ops.mean((fake_img-1)**2)
+    
+class Lsgan_loss_d(nn.loss.LossBase):
+    def __init__(self, reduction='mean'):
+        super().__init__()
+
+        self.mean=ops.ReduceMean()
+        
+    def construct(self, real_img, fake_img):
+
+        return 0.5*(self.mean((real_img-1)**2)+self.mean(fake_img**2))
+        # return 0.5*(ops.mean((real_img-1)**2)+ops.mean(fake_img**2))
 
 def lsgan_loss_g(fake_img: Tensor) -> Tensor:
     return ops.mean((fake_img-1)**2)
@@ -95,6 +131,30 @@ def lsgan_loss(real: Tensor, fake: Tensor) -> Tuple[Tensor, Tensor]:
         return 0.5*(ops.mean((real_img-1)**2)+ops.mean(fake_img**2))
 
     return d(real, fake), g(fake)
+
+class Gan_loss_g(nn.loss.LossBase):
+    def __init__(self, reduction='mean'):
+        super().__init__()
+
+        self.mean=ops.ReduceMean()
+        self.log=ops.Log()
+        
+    def construct(self, fake_img):
+
+        return -self.mean(self.log(fake_img))
+        # return -ops.mean(ops.log(fake_img))
+    
+class Gan_loss_d(nn.loss.LossBase):
+    def __init__(self, reduction='mean'):
+        super().__init__()
+
+        self.mean=ops.ReduceMean()
+        self.log=ops.Log()
+        
+    def construct(self, real_img, fake_img):
+
+        return -self.mean(self.log(real_img)+self.log(1-fake_img))
+        # return -ops.mean(ops.log(real_img)+ops.log(1-fake_img))
 
 def gan_loss_g(fake_img: Tensor) -> Tensor:
     return -ops.mean(ops.log(fake_img))

@@ -1,21 +1,5 @@
 # Mindhub's VGG is currently unusable
 
-# import mindspore_hub as hub
-# from mindspore import context
-# from conf import conf
-# from mindspore import Tensor
-
-# # context.set_context(mode=context.GRAPH_MODE,
-# #                     device_target="CPU")
-
-# model = "mindspore/1.9/vgg16_imagenet2012"
-# network = hub.load(model)
-# network.set_train(False)
-
-
-# def VGG(x: Tensor) -> Tensor:
-#     res = network(x)
-#     return res
 
 from typing import List, Union, Dict
 import logging

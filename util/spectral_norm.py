@@ -1,5 +1,4 @@
 from mindspore import Tensor,ops,nn,Parameter
-from time import time
 
 class Conv2d_Spetral_Norm(nn.Cell):
 
@@ -18,7 +17,6 @@ class Conv2d_Spetral_Norm(nn.Cell):
                  data_format='NCHW'):
         super().__init__()
         
-        # self.conv2d=nn.Conv2d(in_channels,out_channels,kernel_size,stride,pad_mode,padding,dilation,group,has_bias,weight_init,bias_init,data_format)
         self.conv2d=ops.Conv2D(out_channels,kernel_size,1,pad_mode,padding,stride,dilation,group,data_format)
         weight_shape=(out_channels,in_channels,kernel_size,kernel_size)
         self.u=Parameter(ops.standard_normal((1,weight_shape[-1])))
@@ -53,6 +51,5 @@ class Conv2d_Spetral_Norm(nn.Cell):
         weight=Tensor(self.weight)
         weight=self.spectral_norm(weight)
         x=self.conv2d(x,weight)
-        self.weight=weight
 
         return x

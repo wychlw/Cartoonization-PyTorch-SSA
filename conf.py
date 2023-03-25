@@ -1,5 +1,5 @@
 conf = {
-    "device": "CPU",
+    "device": "Ascend",
     "device_id": 0,
 
     "W_surface": 0.1,
@@ -12,16 +12,14 @@ conf = {
     "slic_num": 25,
 
     "epoch": 30,
-    "batch": 2,
+    "batch": 16,
 
-    "lr": 1e-2,
+    "lr": 1e-4,
     "sn": True,
     "G": True,
     "D": True,
 
     "continue_training": True,
-
-    "patch": False,
 
     "real_train_dataset":
     [

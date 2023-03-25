@@ -4,8 +4,10 @@ from mindspore.ops.operations import image_ops
 from conf import conf
 from util.spectral_norm import Conv2d_Spetral_Norm
 
-# conv3x3=Conv2d_Spetral_Norm
-conv3x3 = nn.Conv2d
+if conf["sn"]:
+    conv3x3=Conv2d_Spetral_Norm
+else:
+    conv3x3 = nn.Conv2d
 
 # def conv3x3(in_channel, out_channel, kernel_size=3, stride=1, padding=1):
 #     if conf["sn"]:
@@ -55,16 +57,15 @@ class EncodingLayer(nn.Cell):
 
 class DecodingLayer(nn.Cell):
 
-    def transform(self, before: Tensor, now: Tensor, R: int = 1) -> Tensor:
+    def transform(self, before: Tensor, now: Tensor, R: int = 2) -> Tensor:
         N, C, H, W = now.shape
 
         f = ops.transpose(before, (0, 2, 3, 1))  # N H W C
-        f = ops.reshape(f, (N*H*W, 1, C))          # N*H*W 1 C
+        f = ops.reshape(f, (N*H*W, 1, C))          # N*H*W
 
-        # g_ext = self.unfold(now)   # N C*9 H*W
-        g_ext = now
-        g_ext = g_ext.transpose(0, 2, 3, 1)    # N H*W C*9
-        g_ext = ops.reshape(g_ext, (N*H*W, C, R*R))  # N*H*W C 9
+        g_ext = ops.transpose(now, (0, 2, 3, 1)) # N H W C
+        g_ext = self.extract(g_ext) # N H W C*R
+        g_ext = ops.reshape(g_ext, (N*H*W, C, R*R))
 
         f_ext = ops.reshape(f, (N*H*W, 1, C))
         z = ops.matmul(f_ext, g_ext)
@@ -90,7 +91,9 @@ class DecodingLayer(nn.Cell):
                                K2, stride=1, padding=K2//2, pad_mode="pad")
         self.leaky_relu = nn.LeakyReLU()
 
-        self.unfold = nn.Unfold([1, 2, 2, 1], [1, 1, 1, 1], [
+        # The ExtrctImagePatches currently has issue when using larger than [1,1,2,2]
+        
+        self.extract = ops.operations._inner_ops.ExtractImagePatches([1, 1, 2, 2], [1, 1, 1, 1], [
                           1, 1, 1, 1], "same")
         
         self.soft_max=nn.Softmax(1)
@@ -179,13 +182,6 @@ class Discriminator(nn.Cell):
            nn.LeakyReLU()
         )
 
-        # if conf["patch"]:
-        #     self.snc = conv3x3(128, 1, 1, stride=1, padding=0)
-        #     self.den = None
-        # else:
-        #     self.snc = None
-        #     self.den = nn.Dense(128, 1)
-
         self.snc = None
         
         self.mean=ops.ReduceMean()
@@ -194,13 +190,6 @@ class Discriminator(nn.Cell):
     def construct(self, input: Tensor) -> Tensor:
         
         a = self.net(input)
-        
-
-        # if conf["patch"]:
-        #     x = self.snc(x)
-        # else:
-        #     x = ops.reduce_mean(x, (2, 3))
-        #     x = self.den(x)
 
         b = self.mean(a, (2, 3))
         
