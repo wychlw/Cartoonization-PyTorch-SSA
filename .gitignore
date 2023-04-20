@@ -1,0 +1,5 @@
+model/
+data/
+.vscode/
+__pycache__/
+test.ipynb
