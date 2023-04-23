@@ -8,6 +8,7 @@ from util.guided_image_filtering import guided_filter
 from util.effecient_segmentation_new import effecient_segmentation
 from util.network import Discriminator
 
+
 def gray_ish(t: Tensor) -> Tensor:
     N, C, H, W = t.shape
     ret = t[:, 0]*0.299+t[:, 1]*0.587+t[:, 2]*0.114
@@ -94,7 +95,7 @@ class Gan_loss(nn.Module):
         return -torch.mean(torch.log(fake))
 
     def gan_loss_d(self, real, fake):
-        fake=fake.detach()
+        fake = fake.detach()
         return -torch.mean(torch.log(real)+torch.log(1-fake))
 
     def forward(self, real, fake):
@@ -111,7 +112,7 @@ class Lsgan_loss(nn.Module):
         return torch.mean((fake-1)**2)
 
     def gan_loss_d(self, real, fake):
-        fake=fake.detach()
+        fake = fake.detach()
         return torch.mean((real-1)**2)+torch.mean(fake**2)
 
     def forward(self, real, fake):
@@ -135,27 +136,28 @@ class L_surface(nn.Module):
             real = guided_filter(real, real, 8, 0.05)
             return self.loss(self.discriminator(real), self.discriminator(fake))
 
+
 class L_texture(nn.Module):
-    def __init__(self,discriminator: Discriminator):
+    def __init__(self, discriminator: Discriminator):
         super().__init__()
         self.discriminator = discriminator
 
         self.loss = Lsgan_loss()
 
-    def color_shift(self, x:Tensor)->Tensor:
-        N,C,H,W=x.shape
-        r_w=(0.199-0.399)*torch.rand(1,dtype=x.dtype,device=x.device)+0.399
-        g_w=(0.487-0.687)*torch.rand(1,dtype=x.dtype,device=x.device)+0.687
-        b_w=(0.114-0.314)*torch.rand(1,dtype=x.dtype,device=x.device)+0.314
+    def color_shift(self, x: Tensor) -> Tensor:
+        N, C, H, W = x.shape
+        r_w = (0.199-0.399)*torch.rand(1, dtype=x.dtype, device=x.device)+0.399
+        g_w = (0.487-0.687)*torch.rand(1, dtype=x.dtype, device=x.device)+0.687
+        b_w = (0.114-0.314)*torch.rand(1, dtype=x.dtype, device=x.device)+0.314
 
-        out=r_w*x[:,0,:,:]+g_w*x[:,1,:,:]+b_w*x[:,2,:,:]
+        out = r_w*x[:, 0, :, :]+g_w*x[:, 1, :, :]+b_w*x[:, 2, :, :]
 
-        return out.reshape(N,1,H,W)
+        return out.reshape(N, 1, H, W)
 
     def forward(self, fake: Tensor, real: Tensor = None) -> Tensor:
-        fake=self.color_shift(fake)
+        fake = self.color_shift(fake)
         if real is None:
             return self.loss.gan_loss_g(self.discriminator(fake))
         else:
-            real=self.color_shift(real)
+            real = self.color_shift(real)
             return self.loss(self.discriminator(real), self.discriminator(fake))

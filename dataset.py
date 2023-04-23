@@ -9,7 +9,10 @@ from PIL import Image
 class Real_train_dataset(Dataset):
     real_dataset_path = [
         "data/train_photo/",
-        "data/test/real/"
+        "data/test/real/",
+        "data/face_photo/",
+        "data/scenery_photo/",
+
     ]
 
     img = []
@@ -29,7 +32,7 @@ class Real_train_dataset(Dataset):
         path, label = self.img[self.idx_map[index]]
         pic = Image.open(path)
         pic = transforms.ToTensor()(pic)
-        pic = transforms.Resize([256, 256],antialias=True)(pic)
+        pic = transforms.Resize([256, 256], antialias=True)(pic)
         return pic, label
 
     def __len__(self):
@@ -58,7 +61,7 @@ class Real_test_dataset(Dataset):
         path, label = self.img[self.idx_map[index]]
         pic = Image.open(path)
         pic = transforms.ToTensor()(pic)
-        pic = transforms.Resize([256, 256],antialias=True)(pic)
+        pic = transforms.Resize([256, 256], antialias=True)(pic)
         return pic, label
 
     def __len__(self):
@@ -73,6 +76,12 @@ class Cartoon_train_dataset(Dataset):
         "data/Shinkai/style/",
         "data/SummerWar/style/",
         "data/Paprika/style/",
+        "data/face_cartoon/kyoto_face/",
+        "data/face_cartoon/pa_face/",
+        "data/scenery_cartoon/hayao/",
+        "data/scenery_cartoon/hosoda/",
+        "data/scenery_cartoon/shinkai/",
+        "data/scenery_cartoon/hayao/",
     ]
 
     img = []
@@ -93,7 +102,7 @@ class Cartoon_train_dataset(Dataset):
         path, label = self.img[self.idx_map[index]]
         pic = Image.open(path)
         pic = transforms.ToTensor()(pic)
-        pic = transforms.Resize([256, 256],antialias=True)(pic)
+        pic = transforms.Resize([256, 256], antialias=True)(pic)
         return pic, label
 
     def __len__(self):
@@ -125,7 +134,7 @@ class Cartoon_test_dataset(Dataset):
         path, label = self.img[self.idx_map[index]]
         pic = Image.open(path)
         pic = transforms.ToTensor()(pic)
-        pic = transforms.Resize([256, 256],antialias=True)(pic)
+        pic = transforms.Resize([256, 256], antialias=True)(pic)
         return pic, label
 
     def __len__(self):
