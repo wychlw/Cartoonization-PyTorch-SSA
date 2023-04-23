@@ -83,7 +83,7 @@ def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discr
             texture_disc_optimizer.step()
             texture_disc_optimizer.zero_grad()
 
-            pbar.update(real.shape[0])
+            pbar.update(1)
 
             if batch % 10 == 0:
                 loss_g = generate_loss.item()

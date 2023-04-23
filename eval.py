@@ -3,8 +3,6 @@ from conf import conf
 from torchvision import transforms
 from torch.utils.data import Dataset
 import os
-from PIL import Image
-import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
 import torchvision.utils as vutils
 
