@@ -12,7 +12,7 @@ class Real_train_dataset(Dataset):
         "data/test/real/",
         "data/face_photo/",
         "data/scenery_photo/",
-
+        "data/test/test_photo256/",
     ]
 
     img = []
@@ -82,6 +82,8 @@ class Cartoon_train_dataset(Dataset):
         "data/scenery_cartoon/hosoda/",
         "data/scenery_cartoon/shinkai/",
         "data/scenery_cartoon/hayao/",
+        "data/spirit_away/",
+        "data/test/label_map/",
     ]
 
     img = []

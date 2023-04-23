@@ -85,7 +85,7 @@ def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discr
 
             pbar.update(real.shape[0])
 
-            if batch % 50 == 0:
+            if batch % 10 == 0:
                 loss_g = generate_loss.item()
                 loss_d = surface_d.item()+texture_d.item()
                 print(f"Loss_G: {loss_g:>7f}  Loss_D: {loss_d:>7f}")

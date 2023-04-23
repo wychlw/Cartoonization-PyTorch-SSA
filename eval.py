@@ -43,6 +43,11 @@ saveimg(pred[0], "pt")
 
 print(pred[0])
 
+np_save = pred[0].cpu().detach().numpy()
+np.savetxt("ptr.txt", np_save[0])
+np.savetxt("ptg.txt", np_save[1])
+np.savetxt("ptb.txt", np_save[2])
+
 # npr = pred.detach()
 # npi = npr[0].permute(1, 2, 0).numpy()
 # print("dsfhiuhc")
