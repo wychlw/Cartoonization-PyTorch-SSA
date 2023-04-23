@@ -6,6 +6,8 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from util.vgg import VGG
 
+import torchvision.utils as vutils
+
 
 def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discriminator, device: str = "CPU"):
 
@@ -57,11 +59,13 @@ def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discr
             surface_g, surface_d = surface_loss(pred, real)
             texture_g, texture_d = texture_loss(pred, real)
 
-            generate_loss = structure_loss(pred, pred_vgg)*conf["W_structure"] + \
-                content_loss(pred, real, pred_vgg, real_vgg)*conf["W_content"] + \
-                tv_loss(pred)*conf["W_tv"] + \
-                surface_g*conf["W_surface"] + \
-                texture_g*conf["W_texture"]
+            sl = structure_loss(pred, pred_vgg)*conf["W_structure"]
+            cl = content_loss(pred, real, pred_vgg, real_vgg)*conf["W_content"]
+            tl = tv_loss(pred)*conf["W_tv"]
+            sg = surface_g*conf["W_surface"]
+            tg = texture_g*conf["W_texture"]
+
+            generate_loss = sl + cl + tl + sg + tg
 
             # generator_optimizer.zero_grad()
             generate_loss.backward()
@@ -88,11 +92,17 @@ def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discr
             if batch % 10 == 0:
                 loss_g = generate_loss.item()
                 loss_d = surface_d.item()+texture_d.item()
-                print(f"Loss_G: {loss_g:>7f}  Loss_D: {loss_d:>7f}")
+                print(
+                    f"Loss_G: {loss_g:>7f}  Loss_D: {loss_d:>7f} detail: {sl:>4f} {cl:>4f} {tl:>4f} {sg:>4f} {tg:>4f}")
 
                 torch.save(generator.state_dict(), "model/generator.pth")
                 torch.save(surface_disc.state_dict(), "model/surface.pth")
                 torch.save(texture_disc.state_dict(), "model/texture.pth")
+
+                ps = pred[0].clone().detach().to(torch.device("cpu"))
+                vutils.save_image(ps, "ps.jpg")
+                rs = real[0].clone().detach().to(torch.device("cpu"))
+                vutils.save_image(rs, "rs.jpg")
 
         torch.save(generator.state_dict(), "model/generator.pth")
         torch.save(surface_disc.state_dict(), "model/surface.pth")

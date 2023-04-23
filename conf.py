@@ -3,7 +3,7 @@ conf = {
     "W_texture": 10,
     "W_structure": 200,
     "W_content": 200,
-    "W_tv": 25,
+    "W_tv": 5,
     "W_motion": 0.1,
 
     "epoch": 15,

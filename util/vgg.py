@@ -4,10 +4,18 @@ import torchvision.models as models
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-vgg16 = models.vgg16(weights=models.VGG16_Weights.DEFAULT)
-vgg16.to(device)
-vgg16.eval()
+vgg19 = models.vgg19(weights=models.VGG16_Weights.DEFAULT)
+vgg19.to(device)
+vgg19.eval()
 
-def VGG(x:Tensor)->Tensor:
-    res=vgg16(x)
+# (x-mean)/std
+# x*std+mean
+
+vgg_mean = torch.tensor([0.584, 0.456, 0.406]).reshape(1, 3, 1, 1).to(device)
+vgg_std = torch.tensor([0.229, 0.224, 0.225]).reshape(1, 3, 1, 1).to(device)
+
+
+def VGG(x: Tensor) -> Tensor:
+    x = ((x*0.5+0.5)-vgg_mean)/vgg_std
+    res = vgg19.features[:26](x)
     return res

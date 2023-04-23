@@ -21,11 +21,12 @@ class L_structure(nn.Module):
         self.l1loss = nn.L1Loss()
 
     def forward(self, pred: Tensor, pred_vgg: Tensor = None):
+        N, C, H, W = pred.shape
         if pred_vgg is None:
             pred_vgg = VGG(pred)
         fill_color = effecient_segmentation(pred)
         fill_f = VGG(fill_color)
-        loss = self.l1loss(pred_vgg, fill_f)
+        loss = self.l1loss(pred_vgg, fill_f)/(C*H*W)
         return loss
 
 

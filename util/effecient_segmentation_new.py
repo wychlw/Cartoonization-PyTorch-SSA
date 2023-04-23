@@ -11,7 +11,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 def __proc(img: Tensor) -> Tensor:
     img = img.permute(1, 2, 0).detach().cpu().numpy()
     label = segmentation.felzenszwalb(img, 1, 0.8, 100)
-    gen = color.label2rgb(label, img, kind="avg")
+    gen = color.label2rgb(label, img, kind="mix")
     gen = Tensor(gen)
     gen = gen.permute(2, 0, 1)
     return gen

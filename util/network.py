@@ -116,7 +116,7 @@ class Generator(nn.Module):
 
         self.out = nn.Sequential(
             nn.Conv2d(32, 3, 7, stride=1, padding=3),
-            nn.Tanh()
+            nn.Sigmoid()
         )
 
     def forward(self, x: Tensor) -> Tensor:
@@ -131,7 +131,7 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self,in_channel=3):
+    def __init__(self, in_channel=3):
         super().__init__()
 
         self.net = nn.Sequential(
