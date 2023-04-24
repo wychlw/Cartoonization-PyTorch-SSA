@@ -8,6 +8,8 @@ from util.guided_image_filtering import guided_filter
 from util.effecient_segmentation_new import effecient_segmentation
 from util.network import Discriminator
 
+import torchvision.utils as vutils
+
 
 def gray_ish(t: Tensor) -> Tensor:
     N, C, H, W = t.shape
@@ -26,6 +28,9 @@ class L_structure(nn.Module):
             pred_vgg = VGG(pred)
         fill_color = effecient_segmentation(pred)
         fill_f = VGG(fill_color)
+        # ps = torch.concat([pred, fill_color]).clone(
+        # ).detach().to(torch.device("cpu"))
+        # vutils.save_image(ps, "ls.jpg")
         loss = self.l1loss(pred_vgg, fill_f)/(C*H*W)
         return loss
 
