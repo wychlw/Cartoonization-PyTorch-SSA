@@ -16,6 +16,6 @@ vgg_std = torch.tensor([0.229, 0.224, 0.225]).reshape(1, 3, 1, 1).to(device)
 
 
 def VGG(x: Tensor) -> Tensor:
-    x = ((x*0.5+0.5)-vgg_mean)/vgg_std
+    # x = ((x*0.5+0.5)-vgg_mean)/vgg_std
     res = vgg19.features[:26](x)
     return res

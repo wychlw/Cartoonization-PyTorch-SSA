@@ -43,51 +43,65 @@ def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discr
 
     total = max(len(cartoon_train_dl), len(real_train_dl))
 
+    which = True
+
+    generator_optimizer.zero_grad()
+    surface_disc_optimizer.zero_grad()
+    texture_disc_optimizer.zero_grad()
+
     for epoch in range(conf["epoch"]):
         pbar = tqdm(total=total)
         for batch, (cartoon, real) in enumerate(zip(cartoon_train_dl, real_train_dl)):
             cartoon, real = cartoon[0].to(device), real[0].to(device)
 
             pred = generator(real)
+
+            surface_g, surface_d = surface_loss(pred, cartoon)
+
+            surface_disc_optimizer.zero_grad()
+            surface_d.backward(retain_graph=True)
+            surface_disc_optimizer.step()
+
+            pred = generator(real)
+
+            texture_g, texture_d = texture_loss(pred, cartoon)
+
+            texture_disc_optimizer.zero_grad()
+            texture_d.backward()
+            texture_disc_optimizer.step()
+
+            pred = generator(real)
             pred_vgg = VGG(pred)
             real_vgg = VGG(real)
 
-            # generator.train()
-            # surface_disc.eval()
-            # texture_disc.eval()
-
-            surface_g, surface_d = surface_loss(pred, real)
-            texture_g, texture_d = texture_loss(pred, real)
+            surface_g, surface_d = surface_loss(pred, cartoon)
+            texture_g, texture_d = texture_loss(pred, cartoon)
 
             sl = structure_loss(pred, pred_vgg)*conf["W_structure"]
-            cl = content_loss(pred, real, pred_vgg, real_vgg)*conf["W_content"]
+            cl = content_loss(pred, real, pred_vgg,
+                              real_vgg)*conf["W_content"]
             tl = tv_loss(pred)*conf["W_tv"]
             sg = surface_g*conf["W_surface"]
             tg = texture_g*conf["W_texture"]
 
             generate_loss = sl + cl + tl + sg + tg
 
-            # generator_optimizer.zero_grad()
+            generator_optimizer.zero_grad()
             generate_loss.backward()
-            # generator_optimizer.step()
-
-            # surface_disc_optimizer.zero_grad()
-            surface_d.backward()
-            # surface_disc_optimizer.step()
-
-            # texture_disc_optimizer.zero_grad()
-            texture_d.backward()
-            # texture_disc_optimizer.step()
+            generator_optimizer.step()
 
             # if batch % conf["grad_batch"] == 0:
-            generator_optimizer.step()
-            generator_optimizer.zero_grad()
-            surface_disc_optimizer.step()
-            surface_disc_optimizer.zero_grad()
-            texture_disc_optimizer.step()
-            texture_disc_optimizer.zero_grad()
+            # generator_optimizer.step()
+            # generator_optimizer.zero_grad()
+            # surface_disc_optimizer.step()
+            # surface_disc_optimizer.zero_grad()
+            # texture_disc_optimizer.step()
+            # texture_disc_optimizer.zero_grad()
 
             pbar.update(1)
+
+            if batch % 3 == 0:
+                which = not which
 
             if batch % 10 == 0:
                 loss_g = generate_loss.item()
@@ -99,10 +113,10 @@ def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discr
                 torch.save(surface_disc.state_dict(), "model/surface.pth")
                 torch.save(texture_disc.state_dict(), "model/texture.pth")
 
-                ps = pred[0].clone().detach().to(torch.device("cpu"))
-                vutils.save_image(ps, "ps.jpg")
-                rs = real[0].clone().detach().to(torch.device("cpu"))
-                vutils.save_image(rs, "rs.jpg")
+                ps = pred.clone().detach().to(torch.device("cpu"))
+                rs = real.clone().detach().to(torch.device("cpu"))
+                cs = cartoon.clone().detach().to(torch.device("cpu"))
+                vutils.save_image(torch.concat([ps, rs, cs]), "tt.jpg")
 
         torch.save(generator.state_dict(), "model/generator.pth")
         torch.save(surface_disc.state_dict(), "model/surface.pth")

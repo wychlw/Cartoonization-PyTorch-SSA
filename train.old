@@ -28,9 +28,6 @@ class L_structure(nn.Module):
             pred_vgg = VGG(pred)
         fill_color = effecient_segmentation(pred)
         fill_f = VGG(fill_color)
-        # ps = torch.concat([pred, fill_color]).clone(
-        # ).detach().to(torch.device("cpu"))
-        # vutils.save_image(ps, "ls.jpg")
         N, C, H, W = pred_vgg.shape
         loss = self.l1loss(pred_vgg, fill_f)/(C*H*W)
         return loss
@@ -103,7 +100,7 @@ class Gan_loss(nn.Module):
         return -torch.mean(torch.log(fake))
 
     def gan_loss_d(self, real, fake):
-        fake = fake.detach()
+        # fake = fake.detach()
         return -torch.mean(torch.log(real)+torch.log(1-fake))
 
     def forward(self, real, fake):
@@ -120,11 +117,10 @@ class Lsgan_loss(nn.Module):
         return torch.mean((fake-1)**2)
 
     def gan_loss_d(self, real, fake):
-        # fake = fake.detach()
+        fake = fake.detach()
         return torch.mean((real-1)**2)+torch.mean(fake**2)
 
     def forward(self, real, fake):
-
         loss_g = self.gan_loss_g(fake)
         loss_d = self.gan_loss_d(real, fake)
         return loss_g, loss_d
@@ -138,10 +134,13 @@ class L_surface(nn.Module):
         self.loss = Lsgan_loss()
 
     def forward(self, fake: Tensor, real: Tensor = None) -> Tensor:
+        # fake = fake.detach()
         fake = guided_filter(fake, fake, 8, 0.05)
+
         if real is None:
             return self.loss.gan_loss_g(self.discriminator(fake))
         else:
+            # real = real.detach()
             real = guided_filter(real, real, 8, 0.05)
             return self.loss(self.discriminator(real), self.discriminator(fake))
 
@@ -164,9 +163,11 @@ class L_texture(nn.Module):
         return out.reshape(N, 1, H, W)
 
     def forward(self, fake: Tensor, real: Tensor = None) -> Tensor:
+        # fake = fake.detach()
         fake = self.color_shift(fake)
         if real is None:
             return self.loss.gan_loss_g(self.discriminator(fake))
         else:
+            # real = real.detach()
             real = self.color_shift(real)
             return self.loss(self.discriminator(real), self.discriminator(fake))
