@@ -103,10 +103,12 @@ class Gan_loss(nn.Module):
         return -torch.mean(torch.log(fake))
 
     def gan_loss_d(self, real, fake):
-        fake = fake.detach()
+        # fake = fake.detach()
         return -torch.mean(torch.log(real)+torch.log(1-fake))
 
     def forward(self, real, fake):
+        real = torch.sigmoid(real)
+        fake = torch.sigmoid(fake)
         loss_g = self.gan_loss_g(fake)
         loss_d = self.gan_loss_d(real, fake)
         return loss_g, loss_d

@@ -3,10 +3,5 @@ data/
 .vscode/
 __pycache__/
 test.ipynb
-rt.jpg
-pt.jpg
-ptr.txt
-ptg.txt
-ptb.txt
-ps.jpg
-rs.jpg
+tt.jpg
+conf.py
