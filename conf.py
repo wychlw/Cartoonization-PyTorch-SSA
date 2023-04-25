@@ -1,8 +1,8 @@
 conf = {
-    "W_surface": 50,
-    "W_texture": 100,
-    "W_structure": 500,
-    "W_content": 500,
+    "W_surface": 0.1,
+    "W_texture": 1,
+    "W_structure": 200,
+    "W_content": 1000,
     "W_tv": 5000,
     "W_motion": 0.1,
 

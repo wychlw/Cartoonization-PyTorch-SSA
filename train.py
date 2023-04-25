@@ -44,51 +44,51 @@ def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discr
     total = max(len(cartoon_train_dl), len(real_train_dl))
 
     which = True
-
-    generator_optimizer.zero_grad()
-    surface_disc_optimizer.zero_grad()
-    texture_disc_optimizer.zero_grad()
+    surface_d = None
+    texture_d = None
+    generate_loss = None
 
     for epoch in range(conf["epoch"]):
         pbar = tqdm(total=total)
         for batch, (cartoon, real) in enumerate(zip(cartoon_train_dl, real_train_dl)):
             cartoon, real = cartoon[0].to(device), real[0].to(device)
 
-            pred = generator(real)
+            if which:
+                pred = generator(real)
 
-            surface_g, surface_d = surface_loss(pred, cartoon)
+                surface_g, surface_d = surface_loss(pred, cartoon)
 
-            surface_disc_optimizer.zero_grad()
-            surface_d.backward(retain_graph=True)
-            surface_disc_optimizer.step()
+                surface_disc_optimizer.zero_grad()
+                surface_d.backward(retain_graph=True)
+                surface_disc_optimizer.step()
 
-            pred = generator(real)
+                pred = generator(real)
 
-            texture_g, texture_d = texture_loss(pred, cartoon)
+                texture_g, texture_d = texture_loss(pred, cartoon)
 
-            texture_disc_optimizer.zero_grad()
-            texture_d.backward()
-            texture_disc_optimizer.step()
+                texture_disc_optimizer.zero_grad()
+                texture_d.backward()
+                texture_disc_optimizer.step()
+            else:
+                pred = generator(real)
+                pred_vgg = VGG(pred)
+                real_vgg = VGG(real)
 
-            pred = generator(real)
-            pred_vgg = VGG(pred)
-            real_vgg = VGG(real)
+                surface_g, surface_d = surface_loss(pred, cartoon)
+                texture_g, texture_d = texture_loss(pred, cartoon)
 
-            surface_g, surface_d = surface_loss(pred, cartoon)
-            texture_g, texture_d = texture_loss(pred, cartoon)
+                sl = structure_loss(pred, pred_vgg)*conf["W_structure"]
+                cl = content_loss(pred, real, pred_vgg,
+                                  real_vgg)*conf["W_content"]
+                tl = tv_loss(pred)*conf["W_tv"]
+                sg = surface_g*conf["W_surface"]
+                tg = texture_g*conf["W_texture"]
 
-            sl = structure_loss(pred, pred_vgg)*conf["W_structure"]
-            cl = content_loss(pred, real, pred_vgg,
-                              real_vgg)*conf["W_content"]
-            tl = tv_loss(pred)*conf["W_tv"]
-            sg = surface_g*conf["W_surface"]
-            tg = texture_g*conf["W_texture"]
+                generate_loss = sl + cl + tl + sg + tg
 
-            generate_loss = sl + cl + tl + sg + tg
-
-            generator_optimizer.zero_grad()
-            generate_loss.backward()
-            generator_optimizer.step()
+                generator_optimizer.zero_grad()
+                generate_loss.backward()
+                generator_optimizer.step()
 
             # if batch % conf["grad_batch"] == 0:
             # generator_optimizer.step()
@@ -100,10 +100,10 @@ def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discr
 
             pbar.update(1)
 
-            if batch % 3 == 0:
+            if batch % 10 == 0:
                 which = not which
 
-            if batch % 10 == 0:
+            if batch % 20 == 0 and not which:
                 loss_g = generate_loss.item()
                 loss_d = surface_d.item()+texture_d.item()
                 print(

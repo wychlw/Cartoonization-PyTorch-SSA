@@ -62,7 +62,7 @@ class L_tv(nn.Module):
         dx = pred[:, :, 1:, :]-pred[:, :, :-1, :]
         dy = pred[:, :, :, 1:]-pred[:, :, :, :-1]
 
-        loss = (torch.mean(dx)+torch.mean(dy))/(C*H*W)
+        loss = torch.abs((torch.mean(dx)+torch.mean(dy))/(C*H*W))
 
         return loss
 
