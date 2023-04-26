@@ -23,10 +23,11 @@ class EncodingLayer(nn.Module):
         self.net = nn.Sequential(
             nn.Conv2d(in_channels=in_channle, out_channels=in_channle,
                       kernel_size=3, stride=2, padding=1),
-            nn.LeakyReLU(),
+            nn.LeakyReLU(0.2, True),
             nn.Conv2d(in_channels=in_channle, out_channels=out_channel,
                       kernel_size=3, stride=1, padding=1),
-            nn.LeakyReLU()
+            nn.LeakyReLU(0.2, True),
+
         )
 
     def forward(self, x: Tensor) -> Tensor:
@@ -41,11 +42,11 @@ class ResidualBlock(nn.Module):
         self.network = nn.Sequential(
             nn.Conv2d(in_channels=channel, out_channels=channel,
                       kernel_size=K, stride=1, padding=K//2),
-            nn.LeakyReLU(),
+            nn.LeakyReLU(0.2, True),
             nn.Conv2d(in_channels=channel, out_channels=channel,
                       kernel_size=K, stride=1, padding=K//2),
         )
-        self.leaky_relu = nn.LeakyReLU()
+        self.leaky_relu = nn.LeakyReLU(0.2, True)
 
     def forward(self, x: Tensor) -> Tensor:
         out = self.network(x)
@@ -64,7 +65,7 @@ class DecodingLayer(nn.Module):
         self.resize_bilinear = nn.UpsamplingBilinear2d(scale_factor=2)
         self.conv2 = nn.Conv2d(
             in_channels=out_channel, out_channels=out_channel, kernel_size=3, stride=1, padding=1)
-        self.leaky_relu = nn.LeakyReLU()
+        self.leaky_relu = nn.LeakyReLU(0.2, True)
         self.soft_max = nn.Softmax(dim=1)
 
     def tramsform(self, now: Tensor, before: Tensor) -> Tensor:
@@ -98,7 +99,7 @@ class Generator(nn.Module):
         super().__init__()
         self.proc = nn.Sequential(
             nn.Conv2d(3, 32, 7, stride=1, padding=3),
-            nn.LeakyReLU()
+            nn.LeakyReLU(0.2, True)
         )
 
         self.e1 = EncodingLayer(32, 64)
@@ -136,19 +137,19 @@ class Discriminator(nn.Module):
 
         self.net = nn.Sequential(
             sn(nn.Conv2d(in_channel, 32, 3, stride=2, padding=1)),
-            nn.LeakyReLU(),
+            nn.LeakyReLU(0.2, True),
             sn(nn.Conv2d(32, 32, 3, stride=1, padding=1)),
-            nn.LeakyReLU(),
+            nn.LeakyReLU(0.2, True),
 
             sn(nn.Conv2d(32, 64, 3, stride=2, padding=1)),
-            nn.LeakyReLU(),
+            nn.LeakyReLU(0.2, True),
             sn(nn.Conv2d(64, 64, 3, stride=1, padding=1)),
-            nn.LeakyReLU(),
+            nn.LeakyReLU(0.2, True),
 
             sn(nn.Conv2d(64, 128, 3, stride=2, padding=1)),
-            nn.LeakyReLU(),
+            nn.LeakyReLU(0.2, True),
             sn(nn.Conv2d(128, 128, 3, stride=1, padding=1)),
-            nn.LeakyReLU()
+            nn.LeakyReLU(0.2, True)
         )
 
         self.proc = sn(nn.Conv2d(128, 1, 1, padding=0))
@@ -173,10 +174,10 @@ class Discriminator(nn.Module):
 #         self.out = nn.Sequential(
 #             sn(nn.Conv2d(16, 16, 3, 1, 1)),
 #             nn.BatchNorm2d(16),
-#             nn.LeakyReLU(),
+#              nn.LeakyReLU(0.2,True),
 #             sn(nn.Conv2d(16, 16, 3, 1, 1)),
 #             nn.BatchNorm2d(16),
-#             nn.LeakyReLU(),
+#              nn.LeakyReLU(0.2,True),
 #             sn(nn.Conv2d(16, 3, 3, 1, 1)),
 #             nn.ReLU(),
 #         )

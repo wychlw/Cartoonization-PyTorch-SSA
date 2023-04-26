@@ -41,20 +41,20 @@ def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discr
     texture_disc_optimizer = torch.optim.Adam(
         texture_disc.parameters(), lr=conf["dlr"])
 
-    total = max(len(cartoon_train_dl), len(real_train_dl))
+    total = min(len(cartoon_train_dl), len(real_train_dl))
 
     for epoch in range(conf["epoch"]):
         pbar = tqdm(total=total)
         for batch, (cartoon, real) in enumerate(zip(cartoon_train_dl, real_train_dl)):
             cartoon, real = cartoon[0].to(device), real[0].to(device)
-            
-            if batch%5==0:
-            
+
+            if batch % 2 == 0:
+
                 pred = generator(real)
 
                 surface_g, surface_d = surface_loss(pred, cartoon)
 
-                surface_d=surface_d*0.01
+                surface_d = surface_d*0.01
                 surface_d.backward()
                 surface_disc_optimizer.step()
                 surface_disc_optimizer.zero_grad()
@@ -63,7 +63,7 @@ def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discr
 
                 texture_g, texture_d = texture_loss(pred, cartoon)
 
-                texture_d=texture_d*0.01
+                texture_d = texture_d*0.01
                 texture_d.backward()
                 texture_disc_optimizer.step()
                 texture_disc_optimizer.zero_grad()
@@ -115,6 +115,8 @@ def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discr
                 cs = cartoon.clone().detach().to(torch.device("cpu"))
                 vutils.save_image(torch.concat(
                     [ps, rs, cs, effecient_segmentation(ps).detach().cpu()]), "tt.jpg")
+                vutils.save_image(
+                    texture_loss.color_shift(pred).cpu(), "tt2.jpg")
 
         torch.save(generator.state_dict(), "model/generator.pth")
         torch.save(surface_disc.state_dict(), "model/surface.pth")
