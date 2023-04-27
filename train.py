@@ -12,7 +12,7 @@ import torchvision.utils as vutils
 def pretrain(generator: Generator, device: str = "cpu"):
     real_train_data = Real_train_dataset(False)
     real_train_dl = DataLoader(real_train_data, batch_size=conf["batch"])
-    content_loss = L_content(True)
+    content_loss = L_content()
     total = len(real_train_dl)
     pbar = tqdm(total=total)
     generator_optimizer = torch.optim.Adam(
