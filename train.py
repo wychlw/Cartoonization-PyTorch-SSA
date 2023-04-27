@@ -19,8 +19,8 @@ def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discr
         surface_disc.load_state_dict(surface_checkpoint)
         texture_disc.load_state_dict(texture_checkpoint)
 
-    structure_loss = L_structure()
-    content_loss = L_content()
+    structure_loss = L_structure(True)
+    content_loss = L_content(True)
     tv_loss = L_tv()
     surface_loss = L_surface(surface_disc)
     texture_loss = L_texture(texture_disc)
@@ -35,11 +35,11 @@ def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discr
     texture_disc.train()
 
     generator_optimizer = torch.optim.Adam(
-        generator.parameters(), lr=conf["lr"])
+        generator.parameters(), lr=conf["lr"], betas=(0.5, 0.999))
     surface_disc_optimizer = torch.optim.Adam(
-        surface_disc.parameters(), lr=conf["dlr"])
+        surface_disc.parameters(), lr=conf["dlr"], betas=(0.5, 0.999))
     texture_disc_optimizer = torch.optim.Adam(
-        texture_disc.parameters(), lr=conf["dlr"])
+        texture_disc.parameters(), lr=conf["dlr"], betas=(0.5, 0.999))
 
     total = min(len(cartoon_train_dl), len(real_train_dl))
 
@@ -48,13 +48,14 @@ def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discr
         for batch, (cartoon, real) in enumerate(zip(cartoon_train_dl, real_train_dl)):
             cartoon, real = cartoon[0].to(device), real[0].to(device)
 
-            if batch % 2 == 0:
+            # if batch % 2 == 0:
+            if True:
 
                 pred = generator(real)
 
                 surface_g, surface_d = surface_loss(pred, cartoon)
 
-                surface_d = surface_d*0.01
+                surface_d = surface_d/2
                 surface_d.backward()
                 surface_disc_optimizer.step()
                 surface_disc_optimizer.zero_grad()
@@ -63,7 +64,7 @@ def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discr
 
                 texture_g, texture_d = texture_loss(pred, cartoon)
 
-                texture_d = texture_d*0.01
+                texture_d = texture_d/2
                 texture_d.backward()
                 texture_disc_optimizer.step()
                 texture_disc_optimizer.zero_grad()
@@ -102,9 +103,7 @@ def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discr
                 loss_g = generate_loss.item()
                 loss_d = surface_d.item()+texture_d.item()
                 print(
-                    f"Loss_G: {loss_g:>7f}  Loss_D: {loss_d:>7f} detail: {sl:>4f} {cl:>4f} {tl:>4f} {sg:>4f} {tg:>4f}")
-                # print(
-                #     f"Loss_G: N/A  Loss_D: {loss_d:>7f}")
+                    f"epoch: {epoch} Loss_G: {loss_g:>7f}  Loss_D: {loss_d:>7f} detail: {sl:>4f} {cl:>4f} {tl:>4f} {sg:>4f} {tg:>4f}")
 
                 torch.save(generator.state_dict(), "model/generator.pth")
                 torch.save(surface_disc.state_dict(), "model/surface.pth")
@@ -115,8 +114,6 @@ def train(generator: Generator, surface_disc: Discriminator, texture_disc: Discr
                 cs = cartoon.clone().detach().to(torch.device("cpu"))
                 vutils.save_image(torch.concat(
                     [ps, rs, cs, effecient_segmentation(ps).detach().cpu()]), "tt.jpg")
-                vutils.save_image(
-                    texture_loss.color_shift(pred).cpu(), "tt2.jpg")
 
         torch.save(generator.state_dict(), "model/generator.pth")
         torch.save(surface_disc.state_dict(), "model/surface.pth")

@@ -94,6 +94,46 @@ class DecodingLayer(nn.Module):
         return out
 
 
+class DecodingLayer2(nn.Module):
+    def __init__(self, in_channel: int, out_channel: int, R: int = 3):
+        super().__init__()
+        self.unfold = nn.Unfold(kernel_size=R, stride=1, padding=R//2)
+        self.r = R
+
+        self.conv1 = nn.Conv2d(
+            in_channels=in_channel, out_channels=out_channel, kernel_size=3, stride=1, padding=1)
+        self.resize_bilinear = nn.UpsamplingBilinear2d(scale_factor=2)
+        self.conv2 = nn.Conv2d(
+            in_channels=out_channel*2, out_channels=out_channel, kernel_size=3, stride=1, padding=1)
+        self.leaky_relu = nn.LeakyReLU(0.2, True)
+        self.soft_max = nn.Softmax(dim=1)
+
+    def tramsform(self, now: Tensor, before: Tensor) -> Tensor:
+        N, C, H, W = before.shape
+
+        f = before.permute(0, 2, 3, 1).reshape(N*H*W, 1, C)
+        g = self.unfold(now).permute(0, 2, 1).reshape(N*H*W, C, self.r**2)
+        z = torch.matmul(f, g).squeeze()
+
+        alpha = self.soft_max(z)
+
+        r = torch.matmul(g, alpha.unsqueeze(2)).squeeze()
+        out = r.reshape(N, H, W, C).permute(0, 3, 1, 2)
+
+        return out
+
+    def forward(self, now: Tensor, before: Tensor) -> Tensor:
+        N, C, H, W = now.shape
+
+        o1 = self.conv1(now)
+        o2 = self.resize_bilinear(o1)
+        trans = self.tramsform(o2, before)
+        o3 = self.conv2(torch.cat((before, trans),dim=1))
+        out = self.leaky_relu(o3)
+
+        return out
+
+
 class Generator(nn.Module):
     def __init__(self):
         super().__init__()
@@ -112,8 +152,8 @@ class Generator(nn.Module):
             ResidualBlock(128, 3)
         )
 
-        self.d1 = DecodingLayer(128, 64)
-        self.d2 = DecodingLayer(64, 32)
+        self.d1 = DecodingLayer2(128, 64)
+        self.d2 = DecodingLayer2(64, 32)
 
         self.out = nn.Sequential(
             nn.Conv2d(32, 3, 7, stride=1, padding=3),

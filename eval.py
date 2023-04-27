@@ -5,11 +5,15 @@ import torchvision.utils as vutils
 
 from util.network import *
 from dataset import *
+from tqdm import tqdm
 
 
-def saveimg(t, sn):
-    st = t.clone().detach().to(torch.device("cpu"))
-    vutils.save_image(st, sn+".jpg")
+def saveimg(arr, type_name="no_type", start=0):
+    arr = arr.clone().detach().to(torch.device("cpu"))
+    for i in arr:
+        vutils.save_image(i, "result/"+type_name+"/"+str(start)+".jpg")
+        start += 1
+    return start
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -20,31 +24,26 @@ gen_checkpoint = torch.load("model/generator.pth")
 generator.load_state_dict(gen_checkpoint)
 generator.eval()
 
-real_test_data = Real_test_dataset()
-real_test_dl = DataLoader(real_test_data, batch_size=conf["batch"])
+real_face = Real_face_dataset(False)
+real_scenery = Real_scenery_dataset(False)
 
-real = None
-for i in real_test_dl:
-    real = i[0].to(device)
-    break
-pred = generator(real)
+real_face_loader = DataLoader(
+    real_face, batch_size=conf["batch"], shuffle=True)
+real_scenery_loader = DataLoader(
+    real_scenery, batch_size=conf["batch"], shuffle=True)
 
-pred = pred.cpu()
-real = real.cpu()
+faidx = 0
+scidx = 0
 
+pbar = tqdm(total=100//conf["batch"]+1)
 
-saveimg(real[0], "rt")
-saveimg(pred[0], "pt")
-
-print(pred[0])
-
-np_save = pred[0].cpu().detach().numpy()
-np.savetxt("ptr.txt", np_save[0])
-np.savetxt("ptg.txt", np_save[1])
-np.savetxt("ptb.txt", np_save[2])
-
-# npr = pred.detach()
-# npi = npr[0].permute(1, 2, 0).numpy()
-# print("dsfhiuhc")
-# print(real.shape)
-# plt.imshow(real[0].permute(1, 2, 0).numpy())
+for i, (real_face, real_scenery) in enumerate(zip(real_face_loader, real_scenery_loader)):
+    if i*conf["batch"] > 100:
+        break
+    real_face = real_face[0].to(device)
+    real_scenery = real_scenery[0].to(device)
+    fake_face = generator(real_face)
+    fake_scenery = generator(real_scenery)
+    faidx = saveimg(fake_face, "face", faidx)
+    scidx = saveimg(fake_scenery, "scenery", scidx)
+    pbar.update(1)

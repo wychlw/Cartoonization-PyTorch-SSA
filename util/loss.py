@@ -32,7 +32,7 @@ class L_structure(nn.Module):
         # ).detach().to(torch.device("cpu"))
         # vutils.save_image(ps, "ls.jpg")
         N, C, H, W = pred_vgg.shape
-        loss = self.l1loss(pred_vgg, fill_f)/(C*H*W)
+        loss = self.l1loss(pred_vgg, fill_f)*255/(C*H*W)
         return loss
 
 
@@ -49,7 +49,7 @@ class L_content(nn.Module):
             ori_vgg = VGG(ori)
 
         N, C, H, W = pred_vgg.shape
-        loss = self.l1loss(pred_vgg, ori_vgg)/(C*H*W)
+        loss = self.l1loss(pred_vgg, ori_vgg)*255/(C*H*W)
         return loss
 
 
@@ -163,7 +163,7 @@ class L_texture(nn.Module):
 
         out = r_w*x[:, 0, :, :]+g_w*x[:, 1, :, :]+b_w*x[:, 2, :, :]
 
-        return out.reshape(N, 1, H, W)
+        return out.reshape(N, 1, H, W)/(r_w+g_w+b_w)
 
     def forward(self, fake: Tensor, real: Tensor = None) -> Tensor:
         fake = self.color_shift(fake)
