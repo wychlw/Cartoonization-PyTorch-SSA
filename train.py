@@ -19,6 +19,7 @@ def pretrain(generator: Generator, device: str = "cpu"):
         generator.parameters(), lr=conf["lr"], betas=(0.5, 0.999))
 
     for batch, real in enumerate(real_train_dl):
+        real = real[0].to(device)
         pred = generator(real)
         pred_vgg = VGG(pred)
         real_vgg = VGG(real)
