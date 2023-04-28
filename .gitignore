@@ -1,4 +1,11 @@
 model/
 data/
 .vscode/
+<<<<<<< HEAD
 __pycache__/*
+=======
+__pycache__/
+test.ipynb
+tt.jpg
+conf.py
+>>>>>>> pytorch
